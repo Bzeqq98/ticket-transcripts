@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ticket Transcript System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #00ac99, #008f7a);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #00ac99;
+            padding-bottom: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #00ac99;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .transcript-box {
+            background: #f0f9f8;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #00ac99;
+        }
+        
+        .transcript-content {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        
+        .info-card {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            background: #00ac99;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        
+        .btn:hover {
+            background: #008f7a;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+        }
+        
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 Ticket Transcript System</h1>
+            <p>Hier kannst du die Transcripts deiner Discord Tickets einsehen</p>
+        </div>
+        
+        <div class="info-card">
+            <h3>📋 So funktioniert's:</h3>
+            <p>1. Im Discord Bot "Transcript erstellen" auswählen</p>
+            <p>2. Link kopieren und hier einfügen</p>
+            <p>3. Transcript wird automatisch angezeigt</p>
+        </div>
+        
+        <div class="transcript-box">
+            <h3>🔍 Transcript anzeigen</h3>
+            <input type="text" id="transcriptId" placeholder="Transcript ID hier eingeben..." style="
+                width: 100%;
+                padding: 12px;
+                margin: 10px 0;
+                border: 2px solid #00ac99;
+                border-radius: 5px;
+                font-size: 16px;
+            ">
+            <button class="btn" onclick="loadTranscript()">📄 Transcript laden</button>
+            <button class="btn" onclick="clearTranscript()">🗑️ Zurücksetzen</button>
+        </div>
+        
+        <div id="transcriptContainer">
+            <div class="loading" id="loadingMessage">
+                Gebe eine Transcript ID ein und klicke auf "Transcript laden"
+            </div>
+            <div id="transcriptContent" style="display: none;"></div>
+        </div>
+        
+        <div class="info-card">
+            <h3>ℹ️ Informationen</h3>
+            <p><strong>URL Format:</strong> https://bzeqq98.github.io/ticket-transcripts/?id=DEINE_ID</p>
+            <p><strong>Speicherdauer:</strong> Transcripts sind 30 Tage verfügbar</p>
+            <p><strong>Support:</strong> Bei Problemen den Discord Server kontaktieren</p>
+        </div>
+    </div>
+
+    <script>
+        // Verfügbare Transcripts (simuliert - später vom Server)
+        const availableTranscripts = {
+            'TEST123': `[2024-01-01 12:00:00] System: Test Transcript
+[2024-01-01 12:01:00] User: Hallo, das ist ein Test!
+[2024-01-01 12:02:00] Support: Willkommen im Support!`,
+            
+            'DEMO456': `[2024-01-01 13:00:00] System: Demo Transcript
+[2024-01-01 13:01:00] User: Ich habe eine Frage
+[2024-01-01 13:02:00] Support: Gerne, wie können wir helfen?
+[2024-01-01 13:03:00] User: Danke für die schnelle Hilfe!`
+        };
+
+        // Transcript aus URL Parameter lesen
+        function getTranscriptIdFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+        
+        // Transcript laden
+        function loadTranscript() {
+            let transcriptId = document.getElementById('transcriptId').value;
+            
+            // Falls keine ID eingegeben, versuche URL Parameter
+            if (!transcriptId) {
+                transcriptId = getTranscriptIdFromURL();
+                if (transcriptId) {
+                    document.getElementById('transcriptId').value = transcriptId;
+                }
+            }
+            
+            if (!transcriptId) {
+                showError('Bitte gebe eine Transcript ID ein!');
+                return;
+            }
+            
+            document.getElementById('loadingMessage').innerHTML = '📡 Lade Transcript...';
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('transcriptContent').style.display = 'none';
+            
+            // Simuliere Ladezeit
+            setTimeout(() => {
+                showTranscript(transcriptId);
+            }, 1000);
+        }
+        
+        // Transcript anzeigen
+        function showTranscript(transcriptId) {
+            const transcript = availableTranscripts[transcriptId];
+            
+            if (!transcript) {
+                showError(`Transcript mit der ID "${transcriptId}" wurde nicht gefunden.`);
+                return;
+            }
+            
+            document.getElementById('loadingMessage').style.display = 'none';
+            document.getElementById('transcriptContent').style.display = 'block';
+            
+            const transcriptHTML = `
+                <div class="success">
+                    ✅ Transcript erfolgreich geladen! (ID: ${transcriptId})
+                </div>
+                <h4>📋 Ticket Verlauf:</h4>
+                <div class="transcript-content">${transcript}</div>
+                <div style="margin-top: 15px; text-align: center;">
+                    <button class="btn" onclick="printTranscript()">🖨️ Drucken</button>
+                    <button class="btn" onclick="downloadTranscript('${transcriptId}')">💾 Download</button>
+                </div>
+            `;
+            
+            document.getElementById('transcriptContent').innerHTML = transcriptHTML;
+        }
+        
+        // Fehler anzeigen
+        function showError(message) {
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('transcriptContent').style.display = 'none';
+            document.getElementById('loadingMessage').innerHTML = 
+                `<div class="error">❌ ${message}</div>`;
+        }
+        
+        // Zurücksetzen
+        function clearTranscript() {
+            document.getElementById('transcriptId').value = '';
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('transcriptContent').style.display = 'none';
+            document.getElementById('loadingMessage').innerHTML = 
+                'Gebe eine Transcript ID ein und klicke auf "Transcript laden"';
+            
+            // URL zurücksetzen
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        // Drucken
+        function printTranscript() {
+            window.print();
+        }
+        
+        // Download
+        function downloadTranscript(transcriptId) {
+            const transcript = availableTranscripts[transcriptId];
+            const blob = new Blob([transcript], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `transcript-${transcriptId}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        // Automatisch laden wenn ID in URL
+        window.onload = function() {
+            const transcriptId = getTranscriptIdFromURL();
+            if (transcriptId) {
+                document.getElementById('transcriptId').value = transcriptId;
+                loadTranscript();
+            }
+        };
+        
+        // Enter-Taste zum Laden
+        document.getElementById('transcriptId').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadTranscript();
+            }
+        });
+    </script>
+</body>
+</html>
